@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Quest - 実践サーバー学習プラットフォーム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        .xterm-viewport::-webkit-scrollbar { width: 8px; }
+        .xterm-viewport::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen flex flex-col">
+
+    <header class="p-4 border-b border-gray-700 bg-gray-800 flex justify-between items-center shadow-md">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🚀</span>
+            <h1 class="text-xl font-bold tracking-tighter text-green-400">SERVER QUEST</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="progress-text" class="text-sm font-mono text-gray-400">Mission: 1/20</div>
+            <div class="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-green-500 transition-all duration-500" style="width: 5%"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div class="w-full md:w-1/3 p-6 overflow-y-auto border-r border-gray-700 bg-gray-800/50">
+            <div id="quest-area">
+                <h2 id="quest-title" class="text-2xl font-bold mb-2 text-blue-300">読み込み中...</h2>
+                <div class="inline-block px-2 py-1 rounded text-xs font-bold bg-blue-900/50 text-blue-300 mb-4 uppercase tracking-wider">Mission Goal</div>
+                <p id="quest-mission" class="text-gray-300 mb-6 leading-relaxed text-lg italic">
+                    ...
+                </p>
+                
+                <div class="space-y-4">
+                    <div class="bg-gray-900/80 p-4 rounded-xl border border-gray-700">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">ヒント</h3>
+                        <p id="quest-hint" class="text-sm text-gray-400">...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-700">
+                <p class="text-xs text-gray-500 mb-2">困ったときは：</p>
+                <div class="flex gap-2">
+                    <button onclick="term.writeln('\r\n[HINT] ' + quests[currentIdx].hint + '\r\n$ ')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">ヒントを表示</button>
+                    <button onclick="location.reload()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">リセット</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-black relative flex flex-col">
+            <div id="terminal-container" class="flex-1 p-2"></div>
+            <div class="p-2 bg-gray-800 text-[10px] text-gray-500 flex justify-between border-t border-gray-700">
+                <span>TERMINAL: bash 5.0 (virtual)</span>
+                <span>Press Enter to execute commands</span>
+            </div>
+        </div>
+    </main>
+
+    <div id="clear-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black/90 backdrop-blur-md">
+        <div class="bg-gray-800 border-2 border-green-500 w-full max-w-lg p-8 rounded-2xl shadow-2xl mx-4 transform transition-all" id="modal-content">
+            <div class="text-center">
+                <div class="inline-block bg-green-500 rounded-full p-4 mb-4 shadow-lg shadow-green-500/20">
+                    <span class="text-4xl">🏆</span>
+                </div>
+                <h2 class="text-3xl font-bold text-white mb-1">MISSION CLEAR!</h2>
+                <p id="modal-quest-title" class="text-green-400 font-medium mb-6">Quest Name</p>
+                
+                <div class="bg-gray-900/80 rounded-xl p-5 mb-8 border border-gray-700 text-left">
+                    <h3 class="text-xs font-bold text-blue-400 uppercase tracking-[0.2em] mb-3">現場のエンジニアより</h3>
+                    <p id="modal-explanation" class="text-gray-300 leading-relaxed text-sm italic"></p>
+                </div>
+
+                <button onclick="nextQuest()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 text-lg">
+                    次のミッションへ進む
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- データ定義 ---
+        const quests = [
+            { title: "消えた秘伝のレシピ", mission: "/home 内に隠されたレシピファイル（.で始まる名前）を見つけて表示してください。", hint: "ls -a を使ってみましょう。", files: [".recipe.txt"], clearCmd: "cat .recipe.txt", explanation: "Linuxでは『.』から始まるファイルは設定ファイルなどに使われ、通常は見えません。障害調査ではまず『隠れた原因』がないか探すのが鉄則です。" },
+            { title: "開かない宝箱", mission: "treasure.txt の権限を変更（chmod 644）して読み取れるようにしてください。", hint: "chmod 644 treasure.txt と打ちます。", files: ["treasure.txt"], clearCmd: "chmod 644", explanation: "権限（パーミッション）エラーは実務で最も多いトラブルの一つ。誰に何を許すかを制御するのがセキュリティの基本です。" },
+            { title: "ログの海から救い出せ", mission: "system.log から ERROR という文字が含まれる行を探してください。", hint: "grep ERROR system.log を実行します。", files: ["system.log"], clearCmd: "grep ERROR", explanation: "数万行のログから手動でエラーを探すのは不可能。grepを使いこなせば、数秒で原因を特定できます。" },
+            { title: "満杯の倉庫", mission: "容量を圧迫している巨大な temp_video.mp4 を削除してください。", hint: "rm temp_video.mp4 で削除。慎重に！", files: ["temp_video.mp4"], clearCmd: "rm temp_video", explanation: "サーバーの容量がいっぱいになると全ての機能が止まります。不要なものを捨てる勇気もエンジニアには必要です。" },
+            { title: "重すぎる荷物", mission: "どのディレクトリが容量を食っているか du コマンドで確認してください。", hint: "du -sh を実行します。", files: ["data/"], clearCmd: "du -sh", explanation: "闇雲に消す前に、どこが重いのかを特定する。論理的な切り分けが解決への最短ルートです。" }
+            // ... 同様に20問まで追加可能
+        ];
+
+        let currentIdx = 0;
+        let currentInput = '';
+        const term = new Terminal({ cursorBlink: true, theme: { background: '#000000' }, fontSize: 16, fontFamily: 'monospace' });
+
+        // --- 初期化 ---
+        function init() {
+            term.open(document.getElementById('terminal-container'));
+            loadQuest(0);
+            
+            term.onData(e => {
+                if (e === '\r') {
+                    handleInput(currentInput);
+                    currentInput = '';
+                    term.write('\r\n$ ');
+                } else if (e === '\u007f') {
+                    if (currentInput.length > 0) {
+                        currentInput = currentInput.slice(0, -1);
+                        term.write('\b \b');
+                    }
+                } else {
+                    currentInput += e;
+                    term.write(e);
+                }
+            });
+        }
+
+        function loadQuest(idx) {
+            const q = quests[idx];
+            document.getElementById('quest-title').innerText = q.title;
+            document.getElementById('quest-mission').innerText = q.mission;
+            document.getElementById('quest-hint').innerText = q.hint;
+            document.getElementById('progress-text').innerText = `Mission: ${idx + 1}/${quests.length}`;
+            document.getElementById('progress-bar').style.width = `${((idx + 1) / quests.length) * 100}%`;
+            
+            term.clear();
+            term.writeln(`\x1B[1;34m--- MISSION START: ${q.title} ---\x1B[0m`);
+            term.writeln('Type "help" for basic commands.\r\n$ ');
+        }
+
+        function handleInput(input) {
+            const cmd = input.trim();
+            const q = quests[currentIdx];
+
+            if (cmd === 'help') {
+                term.write('\r\nAvailable: ls, cat, chmod, rm, du, grep, clear');
+            } else if (cmd === 'ls' || cmd === 'ls -l') {
+                term.write('\r\n' + q.files.filter(f => !f.startsWith('.')).join('  '));
+            } else if (cmd === 'ls -a') {
+                term.write('\r\n.  ..  ' + q.files.join('  '));
+            } else if (cmd.includes(q.clearCmd)) {
+                showClearModal();
+            } else {
+                term.write('\r\nCommand executed. Check the mission goals if no change.');
+            }
+        }
+
+        function showClearModal() {
+            const modal = document.getElementById('clear-modal');
+            document.getElementById('modal-quest-title').innerText = quests[currentIdx].title;
+            document.getElementById('modal-explanation').innerText = quests[currentIdx].explanation;
+            modal.classList.remove('hidden');
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        }
+
+        function nextQuest() {
+            document.getElementById('clear-modal').classList.add('hidden');
+            currentIdx++;
+            if (currentIdx < quests.length) {
+                loadQuest(currentIdx);
+            } else {
+                alert("全てのミッションをクリアしました！");
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
