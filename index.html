@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Quest - 実践サーバー学習プラットフォーム</title>
+    <title>Server Quest - 実践サーバー学習</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.js"></script>
@@ -11,6 +11,8 @@
     <style>
         .xterm-viewport::-webkit-scrollbar { width: 8px; }
         .xterm-viewport::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        .badge-unlock { animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans min-h-screen flex flex-col">
@@ -21,63 +23,59 @@
             <h1 class="text-xl font-bold tracking-tighter text-green-400">SERVER QUEST</h1>
         </div>
         <div class="flex items-center gap-4">
+            <button onclick="toggleLanguage()" id="lang-btn" class="text-xs border border-gray-600 px-3 py-1 rounded-full hover:bg-gray-700 transition-all font-mono">English</button>
             <div id="progress-text" class="text-sm font-mono text-gray-400">Mission: 1/20</div>
-            <div class="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div class="w-32 h-2 bg-gray-700 rounded-full overflow-hidden hidden md:block">
                 <div id="progress-bar" class="h-full bg-green-500 transition-all duration-500" style="width: 5%"></div>
             </div>
         </div>
     </header>
 
     <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <div class="w-full md:w-1/3 p-6 overflow-y-auto border-r border-gray-700 bg-gray-800/50">
-            <div id="quest-area">
-                <h2 id="quest-title" class="text-2xl font-bold mb-2 text-blue-300">読み込み中...</h2>
-                <div class="inline-block px-2 py-1 rounded text-xs font-bold bg-blue-900/50 text-blue-300 mb-4 uppercase tracking-wider">Mission Goal</div>
-                <p id="quest-mission" class="text-gray-300 mb-6 leading-relaxed text-lg italic">
-                    ...
-                </p>
+        <div class="w-full md:w-1/3 p-6 overflow-y-auto border-r border-gray-700 bg-gray-800/50 flex flex-col">
+            <div class="flex-1">
+                <h2 id="quest-title" class="text-2xl font-bold mb-2 text-blue-300">Loading...</h2>
+                <div class="inline-block px-2 py-1 rounded text-[10px] font-bold bg-blue-900/50 text-blue-300 mb-4 uppercase tracking-widest" data-i18n="mission_goal">ミッション目標</div>
+                <p id="quest-mission" class="text-gray-300 mb-6 leading-relaxed text-lg italic italic-font">...</p>
                 
-                <div class="space-y-4">
-                    <div class="bg-gray-900/80 p-4 rounded-xl border border-gray-700">
-                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-2">ヒント</h3>
-                        <p id="quest-hint" class="text-sm text-gray-400">...</p>
-                    </div>
+                <div class="bg-gray-900/80 p-4 rounded-xl border border-gray-700 mb-6">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase mb-2" data-i18n="hint_label">ヒント</h3>
+                    <p id="quest-hint" class="text-sm text-gray-400">...</p>
                 </div>
             </div>
 
-            <div class="mt-8 pt-6 border-t border-gray-700">
-                <p class="text-xs text-gray-500 mb-2">困ったときは：</p>
-                <div class="flex gap-2">
-                    <button onclick="term.writeln('\r\n[HINT] ' + quests[currentIdx].hint + '\r\n$ ')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">ヒントを表示</button>
-                    <button onclick="location.reload()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">リセット</button>
+            <div class="pt-6 border-t border-gray-700">
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">YOUR BADGES</h3>
+                <div id="badge-container" class="flex gap-3 min-h-[40px]">
+                    <div id="badge-placeholder" class="text-[10px] text-gray-600 italic font-mono">No badges yet.</div>
                 </div>
             </div>
         </div>
 
-        <div class="flex-1 bg-black relative flex flex-col">
+        <div class="flex-1 bg-black flex flex-col relative">
             <div id="terminal-container" class="flex-1 p-2"></div>
-            <div class="p-2 bg-gray-800 text-[10px] text-gray-500 flex justify-between border-t border-gray-700">
-                <span>TERMINAL: bash 5.0 (virtual)</span>
-                <span>Press Enter to execute commands</span>
+            <div class="p-2 bg-gray-800 text-[10px] text-gray-500 flex justify-between border-t border-gray-700 font-mono">
+                <span data-i18n="terminal_info">TERMINAL: virtual bash v5.0</span>
+                <span>Press Enter to execute</span>
             </div>
         </div>
     </main>
 
-    <div id="clear-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black/90 backdrop-blur-md">
-        <div class="bg-gray-800 border-2 border-green-500 w-full max-w-lg p-8 rounded-2xl shadow-2xl mx-4 transform transition-all" id="modal-content">
+    <div id="clear-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black/90 backdrop-blur-md px-4">
+        <div class="bg-gray-800 border-2 border-green-500 w-full max-w-lg p-8 rounded-2xl shadow-2xl transform transition-all" id="modal-content">
             <div class="text-center">
                 <div class="inline-block bg-green-500 rounded-full p-4 mb-4 shadow-lg shadow-green-500/20">
-                    <span class="text-4xl">🏆</span>
+                    <span class="text-4xl" id="modal-icon">🏆</span>
                 </div>
-                <h2 class="text-3xl font-bold text-white mb-1">MISSION CLEAR!</h2>
+                <h2 class="text-3xl font-bold text-white mb-1" data-i18n="clear_title">MISSION CLEAR!</h2>
                 <p id="modal-quest-title" class="text-green-400 font-medium mb-6">Quest Name</p>
                 
                 <div class="bg-gray-900/80 rounded-xl p-5 mb-8 border border-gray-700 text-left">
-                    <h3 class="text-xs font-bold text-blue-400 uppercase tracking-[0.2em] mb-3">現場のエンジニアより</h3>
+                    <h3 id="modal-explanation-label" class="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em] mb-3" data-i18n="engineer_note">現場のエンジニアより</h3>
                     <p id="modal-explanation" class="text-gray-300 leading-relaxed text-sm italic"></p>
                 </div>
 
-                <button onclick="nextQuest()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 text-lg">
+                <button onclick="nextQuest()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 text-lg" id="btn-next-text">
                     次のミッションへ進む
                 </button>
             </div>
@@ -85,25 +83,77 @@
     </div>
 
     <script>
-        // --- データ定義 ---
+        // --- 1. 多言語データ ---
+        const translations = {
+            ja: {
+                mission_goal: "ミッション目標",
+                hint_label: "ヒント",
+                btn_hint: "ヒントを表示",
+                btn_reset: "リセット",
+                btn_next: "次のミッションへ進む →",
+                engineer_note: "現場のエンジニアより",
+                all_clear: "おめでとう！全ての障害を解決しました！",
+                terminal_info: "ターミナル: 仮想 bash v5.0",
+                lang_toggle: "English",
+                clear_title: "ミッションクリア！"
+            },
+            en: {
+                mission_goal: "MISSION GOAL",
+                hint_label: "HINT",
+                btn_hint: "Show Hint",
+                btn_reset: "Reset",
+                btn_next: "Next Mission →",
+                engineer_note: "Message from Senior Engineer",
+                all_clear: "Congratulations! You solved all server issues!",
+                terminal_info: "TERMINAL: Virtual bash v5.0",
+                lang_toggle: "日本語",
+                clear_title: "MISSION CLEAR!"
+            }
+        };
+
+        // --- 2. クエストデータ (20問) ---
         const quests = [
-            { title: "消えた秘伝のレシピ", mission: "/home 内に隠されたレシピファイル（.で始まる名前）を見つけて表示してください。", hint: "ls -a を使ってみましょう。", files: [".recipe.txt"], clearCmd: "cat .recipe.txt", explanation: "Linuxでは『.』から始まるファイルは設定ファイルなどに使われ、通常は見えません。障害調査ではまず『隠れた原因』がないか探すのが鉄則です。" },
-            { title: "開かない宝箱", mission: "treasure.txt の権限を変更（chmod 644）して読み取れるようにしてください。", hint: "chmod 644 treasure.txt と打ちます。", files: ["treasure.txt"], clearCmd: "chmod 644", explanation: "権限（パーミッション）エラーは実務で最も多いトラブルの一つ。誰に何を許すかを制御するのがセキュリティの基本です。" },
-            { title: "ログの海から救い出せ", mission: "system.log から ERROR という文字が含まれる行を探してください。", hint: "grep ERROR system.log を実行します。", files: ["system.log"], clearCmd: "grep ERROR", explanation: "数万行のログから手動でエラーを探すのは不可能。grepを使いこなせば、数秒で原因を特定できます。" },
-            { title: "満杯の倉庫", mission: "容量を圧迫している巨大な temp_video.mp4 を削除してください。", hint: "rm temp_video.mp4 で削除。慎重に！", files: ["temp_video.mp4"], clearCmd: "rm temp_video", explanation: "サーバーの容量がいっぱいになると全ての機能が止まります。不要なものを捨てる勇気もエンジニアには必要です。" },
-            { title: "重すぎる荷物", mission: "どのディレクトリが容量を食っているか du コマンドで確認してください。", hint: "du -sh を実行します。", files: ["data/"], clearCmd: "du -sh", explanation: "闇雲に消す前に、どこが重いのかを特定する。論理的な切り分けが解決への最短ルートです。" }
-            // ... 同様に20問まで追加可能
+            { id: 1, title: { ja: "消えた秘伝のレシピ", en: "The Missing Recipe" }, mission: { ja: "/home 内に隠されたレシピファイル（.で始まる名前）を見つけ表示してください。", en: "Find and display the hidden recipe file (starts with '.') in /home." }, hint: { ja: "ls -a を使います。", en: "Use 'ls -a'." }, clearCmd: "cat .recipe.txt", explanation: { ja: "Linuxでは『.』から始まるファイルは通常は見えません。隠れた原因を探すのが鉄則です。", en: "Files starting with '.' are hidden. Looking for hidden causes is a key rule." }},
+            { id: 2, title: { ja: "開かない宝箱", en: "Locked Treasure" }, mission: { ja: "treasure.txt の権限を chmod 644 で変更して読み取れるようにしてください。", en: "Change permission of treasure.txt to 644 to read it." }, hint: { ja: "chmod 644 treasure.txt と打ちます。", en: "Type 'chmod 644 treasure.txt'." }, clearCmd: "chmod 644", explanation: { ja: "権限エラーは実務で最も多いトラブルの一つです。", en: "Permission errors are one of the most common issues in practice." }},
+            { id: 3, title: { ja: "ログの海から救え", en: "Save from Log Sea" }, mission: { ja: "system.log から ERROR という文字が含まれる行を探してください。", en: "Find lines containing 'ERROR' in system.log." }, hint: { ja: "grep ERROR system.log を実行します。", en: "Run 'grep ERROR system.log'." }, clearCmd: "grep ERROR", explanation: { ja: "grepを使えば、数万行のログから数秒で原因を特定できます。", en: "Grep helps you find causes in seconds among thousands of log lines." }},
+            { id: 4, title: { ja: "満杯の倉庫", en: "Full Warehouse" }, mission: { ja: "巨大な temp_video.mp4 を rm で削除してください。", en: "Delete the large temp_video.mp4 using 'rm'." }, hint: { ja: "rm temp_video.mp4 です。", en: "Use 'rm temp_video.mp4'." }, clearCmd: "rm temp_video", explanation: { ja: "不要なものを捨てる勇気もエンジニアには必要です。", en: "Engineers need the courage to delete unnecessary files." }},
+            { id: 5, title: { ja: "重すぎる荷物", en: "Heavy Luggage" }, mission: { ja: "du コマンドでどのディレクトリが重いか確認してください。", en: "Check directory sizes using the 'du' command." }, hint: { ja: "du -sh を使います。", en: "Use 'du -sh'." }, clearCmd: "du -sh", explanation: { ja: "どこが重いのか特定するのが解決への最短ルートです。", en: "Identifying what is heavy is the shortest path to a solution." }},
+            { id: 6, title: { ja: "暴走したロボット", en: "Runaway Robot" }, mission: { ja: "プロセス PID 1234 を kill で停止させてください。", en: "Stop the process with PID 1234 using 'kill'." }, hint: { ja: "kill 1234 と打ちます。", en: "Type 'kill 1234'." }, clearCmd: "kill 1234", explanation: { ja: "暴走プロセスはサーバー全体の停止を招きます。", en: "Runaway processes can cause the entire server to stop." }},
+            { id: 7, title: { ja: "眠らない幽霊", en: "Sleepless Ghost" }, mission: { ja: "lsof で開かれているファイルを確認してください。", en: "Check open files using 'lsof'." }, hint: { ja: "lsof コマンドを使います。", en: "Use the 'lsof' command." }, clearCmd: "lsof", explanation: { ja: "消したはずのファイルが解放されない現象を特定します。", en: "Identify cases where deleted files are not released." }},
+            { id: 8, title: { ja: "二重予約の窓口", en: "Double Booking" }, mission: { ja: "80番ポートの状態を ss コマンドで確認してください。", en: "Check the status of port 80 using the 'ss' command." }, hint: { ja: "ss -tulpn を使います。", en: "Use 'ss -tulpn'." }, clearCmd: "ss", explanation: { ja: "同じポートを複数のアプリで使うことはできません。", en: "The same port cannot be used by multiple apps." }},
+            { id: 9, title: { ja: "時をかけるサーバー", en: "Time-Traveling Server" }, mission: { ja: "timedatectl で時刻設定を確認してください。", en: "Check time settings with 'timedatectl'." }, hint: { ja: "timedatectl と打ちます。", en: "Type 'timedatectl'." }, clearCmd: "timedatectl", explanation: { ja: "時刻がズレると認証やログの解析に支障が出ます。", en: "Time drifts cause issues with authentication and log analysis." }},
+            { id: 10, title: { ja: "記憶喪失の再起動", en: "Amnesiac Reboot" }, mission: { ja: "/etc/fstab の中身を表示して確認してください。", en: "Display and check the contents of /etc/fstab." }, hint: { ja: "cat /etc/fstab を使います。", en: "Use 'cat /etc/fstab'." }, clearCmd: "cat /etc/fstab", explanation: { ja: "設定ファイルに書いて初めて、設定は『定着』します。", en: "Settings are only 'fixed' once written to a config file." }},
+            { id: 11, title: { ja: "届かない手紙", en: "Lost Letter" }, mission: { ja: "192.168.1.10 への ping を確認してください。", en: "Check ping to 192.168.1.10." }, hint: { ja: "ping 192.168.1.10 です。", en: "Use 'ping 192.168.1.10'." }, clearCmd: "ping", explanation: { ja: "ネットワークトラブルの基本はpingからです。", en: "The basics of networking issues start with ping." }},
+            { id: 12, title: { ja: "名前のない住所", en: "Address with no Name" }, mission: { ja: "nslookup で名前解決ができるか確認してください。", en: "Check if name resolution works with 'nslookup'." }, hint: { ja: "nslookup google.com です。", en: "Use 'nslookup google.com'." }, clearCmd: "nslookup", explanation: { ja: "名前解決ができないとURLが機能しません。", en: "URLs won't work if name resolution fails." }},
+            { id: 13, title: { ja: "見えない壁", en: "Invisible Wall" }, mission: { ja: "ufw status で壁の状態を確認してください。", en: "Check the firewall status with 'ufw status'." }, hint: { ja: "ufw status と打ちます。", en: "Type 'ufw status'." }, clearCmd: "ufw", explanation: { ja: "ファイアウォールは不必要な通信を遮断します。", en: "Firewalls block unnecessary traffic." }},
+            { id: 14, title: { ja: "ゾンビの増殖", en: "Zombie Growth" }, mission: { ja: "pstree でプロセスの親子関係を見てください。", en: "View the process hierarchy with 'pstree'." }, hint: { ja: "pstree コマンドを使います。", en: "Use the 'pstree' command." }, clearCmd: "pstree", explanation: { ja: "トラブルの元凶（親）を特定することが大切です。", en: "It is important to identify the root cause (parent)." }},
+            { id: 15, title: { ja: "壊れたリンク", en: "Broken Link" }, mission: { ja: "ln -s でシンボリックリンクを作成し直してください。", en: "Recreate the symbolic link with 'ln -s'." }, hint: { ja: "ln -s config_file link_name です。", en: "Use 'ln -s config_file link_name'." }, clearCmd: "ln -s", explanation: { ja: "ショートカットが切れると道に迷ってしまいます。", en: "Systems get lost when shortcuts are broken." }},
+            { id: 16, title: { ja: "inodeの枯渇", en: "Inode Exhaustion" }, mission: { ja: "df -i で管理枠の使用量を確認してください。", en: "Check inode usage with 'df -i'." }, hint: { ja: "df -i コマンドです。", en: "Use the 'df -i' command." }, clearCmd: "df -i", explanation: { ja: "容量はあっても個数制限で止まることがあります。", en: "Even with capacity, systems can stop due to count limits." }},
+            { id: 17, title: { ja: "SSHの締め出し", en: "SSH Lockdown" }, mission: { ja: "/etc/ssh/sshd_config の内容を表示してください。", en: "Display the contents of /etc/ssh/sshd_config." }, hint: { ja: "cat を使いましょう。", en: "Use the 'cat' command." }, clearCmd: "sshd_config", explanation: { ja: "SSHは入るための唯一の道。慎重な管理が必要です。", en: "SSH is the only way in; it requires careful management." }},
+            { id: 18, title: { ja: "メモリ漏れの蛇口", en: "Leaking Faucet" }, mission: { ja: "free -m でメモリの空きを確認してください。", en: "Check free memory with 'free -m'." }, hint: { ja: "free -m と打ちます。", en: "Type 'free -m'." }, clearCmd: "free -m", explanation: { ja: "メモリ不足はシステムの突然死を招きます。", en: "Memory shortages lead to sudden system crashes." }},
+            { id: 19, title: { ja: "遅すぎる応答", en: "Too Slow Response" }, mission: { ja: "iostat でディスクの負荷を確認してください。", en: "Check disk load with 'iostat'." }, hint: { ja: "iostat コマンドを使います。", en: "Use the 'iostat' command." }, clearCmd: "iostat", explanation: { ja: "読み書きが詰まると全体がカクつきます。", en: "If I/O gets stuck, the whole system stutters." }},
+            { id: 20, title: { ja: "秘密の鍵の不一致", en: "Key Mismatch" }, mission: { ja: "秘密鍵の権限を chmod 600 で修正してください。", en: "Fix private key permissions with 'chmod 600'." }, hint: { ja: "chmod 600 id_rsa です。", en: "Use 'chmod 600 id_rsa'." }, clearCmd: "chmod 600", explanation: { ja: "鍵の管理が甘いとLinuxは拒否します。セキュリティの基本です。", en: "Linux rejects keys with loose management. It's security 101." }}
         ];
 
-        let currentIdx = 0;
-        let currentInput = '';
-        const term = new Terminal({ cursorBlink: true, theme: { background: '#000000' }, fontSize: 16, fontFamily: 'monospace' });
+        // --- 3. バッジデータ ---
+        const badgeData = {
+            5: { id: 'beginner', icon: '🌱', ja: 'ジュニア・アドミン', en: 'Junior Admin', color: 'bg-green-600' },
+            10: { id: 'network', icon: '🌐', ja: 'ネットワーク・マスター', en: 'Network Master', color: 'bg-blue-600' },
+            20: { id: 'guardian', icon: '🛡️', ja: 'システム守護神', en: 'System Guardian', color: 'bg-purple-600' }
+        };
 
-        // --- 初期化 ---
+        // --- 4. ロジック管理 ---
+        let currentIdx = 0;
+        let currentLang = 'ja';
+        let currentInput = '';
+        let term;
+
         function init() {
+            term = new Terminal({ cursorBlink: true, theme: { background: '#000000' }, fontSize: 16, fontFamily: 'monospace' });
             term.open(document.getElementById('terminal-container'));
             loadQuest(0);
-            
+            renderBadges();
+
             term.onData(e => {
                 if (e === '\r') {
                     handleInput(currentInput);
@@ -122,51 +172,93 @@
         }
 
         function loadQuest(idx) {
+            currentIdx = idx;
             const q = quests[idx];
-            document.getElementById('quest-title').innerText = q.title;
-            document.getElementById('quest-mission').innerText = q.mission;
-            document.getElementById('quest-hint').innerText = q.hint;
-            document.getElementById('progress-text').innerText = `Mission: ${idx + 1}/${quests.length}`;
-            document.getElementById('progress-bar').style.width = `${((idx + 1) / quests.length) * 100}%`;
-            
+            updateUI();
             term.clear();
-            term.writeln(`\x1B[1;34m--- MISSION START: ${q.title} ---\x1B[0m`);
-            term.writeln('Type "help" for basic commands.\r\n$ ');
+            term.writeln(`\x1B[1;34m--- MISSION ${idx + 1} START ---\x1B[0m`);
+            term.write('$ ');
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'ja' ? 'en' : 'ja';
+            updateUI();
+        }
+
+        function updateUI() {
+            const t = translations[currentLang];
+            const q = quests[currentIdx];
+
+            // UIテキスト更新
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) el.innerText = t[key];
+            });
+
+            document.getElementById('lang-btn').innerText = t.lang_toggle;
+            document.getElementById('quest-title').innerText = q.title[currentLang];
+            document.getElementById('quest-mission').innerText = q.mission[currentLang];
+            document.getElementById('quest-hint').innerText = q.hint[currentLang];
+            document.getElementById('progress-text').innerText = `Mission: ${currentIdx + 1}/${quests.length}`;
+            document.getElementById('progress-bar').style.width = `${((currentIdx + 1) / quests.length) * 100}%`;
+            document.getElementById('btn-next-text').innerText = t.btn_next;
         }
 
         function handleInput(input) {
-            const cmd = input.trim();
             const q = quests[currentIdx];
-
-            if (cmd === 'help') {
-                term.write('\r\nAvailable: ls, cat, chmod, rm, du, grep, clear');
-            } else if (cmd === 'ls' || cmd === 'ls -l') {
-                term.write('\r\n' + q.files.filter(f => !f.startsWith('.')).join('  '));
-            } else if (cmd === 'ls -a') {
-                term.write('\r\n.  ..  ' + q.files.join('  '));
-            } else if (cmd.includes(q.clearCmd)) {
+            if (input.includes(q.clearCmd)) {
                 showClearModal();
+            } else if (input.trim() === 'help') {
+                term.write('\r\nCommands: ls, cat, grep, rm, du, kill, lsof, ss, ps, ping, nslookup, chmod, df, ufw');
             } else {
-                term.write('\r\nCommand executed. Check the mission goals if no change.');
+                term.write('\r\n[System] Command processed. Keep trying to solve the mission!');
             }
         }
 
         function showClearModal() {
             const modal = document.getElementById('clear-modal');
-            document.getElementById('modal-quest-title').innerText = quests[currentIdx].title;
-            document.getElementById('modal-explanation').innerText = quests[currentIdx].explanation;
+            const q = quests[currentIdx];
+            document.getElementById('modal-quest-title').innerText = q.title[currentLang];
+            document.getElementById('modal-explanation').innerText = q.explanation[currentLang];
             modal.classList.remove('hidden');
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            checkAndAwardBadges();
         }
 
         function nextQuest() {
             document.getElementById('clear-modal').classList.add('hidden');
-            currentIdx++;
-            if (currentIdx < quests.length) {
-                loadQuest(currentIdx);
+            if (currentIdx + 1 < quests.length) {
+                loadQuest(currentIdx + 1);
             } else {
-                alert("全てのミッションをクリアしました！");
+                alert(translations[currentLang].all_clear);
             }
+        }
+
+        function checkAndAwardBadges() {
+            const count = currentIdx + 1;
+            if (badgeData[count]) {
+                const badge = badgeData[count];
+                localStorage.setItem(`badge_${badge.id}`, 'true');
+                renderBadges();
+            }
+        }
+
+        function renderBadges() {
+            const container = document.getElementById('badge-container');
+            container.innerHTML = '';
+            let earned = false;
+            Object.values(badgeData).forEach(b => {
+                if (localStorage.getItem(`badge_${b.id}`)) {
+                    earned = true;
+                    const el = document.createElement('div');
+                    el.className = `${b.color} w-10 h-10 rounded-lg flex items-center justify-center shadow-lg badge-unlock group relative`;
+                    el.innerHTML = `<span class="text-xl">${b.icon}</span>
+                        <div class="absolute bottom-full mb-2 hidden group-hover:block bg-black text-[10px] px-2 py-1 rounded border border-gray-600 whitespace-nowrap">${b[currentLang]}</div>`;
+                    container.appendChild(el);
+                }
+            });
+            if (earned) document.getElementById('badge-placeholder').style.display = 'none';
         }
 
         window.onload = init;
